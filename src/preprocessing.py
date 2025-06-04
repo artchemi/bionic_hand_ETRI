@@ -34,9 +34,9 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))) 
 def main():
     for i in range(1, 11):
         zip_path = f'data/s{i}.zip'
-        extract_to = f'data/s{i}'
+        extract_to = f'data/'
 
-        os.makedirs(extract_to, exist_ok=True)
+        # os.makedirs(extract_to, exist_ok=True)
 
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
             zip_ref.extractall(extract_to)
