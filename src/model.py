@@ -1,5 +1,6 @@
 import torch
 from torch import nn
+from torch.utils.data import DataLoader
 
 import os, sys
 
@@ -71,6 +72,17 @@ class FullModel(nn.Module):
         out = self.ff_classifier(x)
 
         return out, x_channels
+    
 
+class Trainer:
+    def __init__(self, model: nn.Module, device=torch.device('cuda'), lr=1e-3):
+
+        pass
+
+    def train_epoch(self, dataloader: DataLoader) -> list:
+        pass
+
+    def evaluate(self, dataloader: DataLoader) -> list:
+        pass
 
 
