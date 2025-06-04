@@ -2,3 +2,5 @@
 
 # Ignore all archives
 *.zip
+
+data/
