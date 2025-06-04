@@ -1,0 +1,1 @@
+Add README adn .gitignore
