@@ -8,10 +8,8 @@ basic/
 │
 ├── src
 │ ├── model.py    # Main model
+│ ├── preprocessing.py    # Download data 
 │ ├── utils.py    # Additional functions: data parsing, metrics and etc.
-│ ├── testing.pickle
-│ ├── train-images.idx3-ubyte
-│ ├── training.pickle
 │ └── train-labels.idx1-ubyte
 │
 ├── config.py    # Model hyperparameters
