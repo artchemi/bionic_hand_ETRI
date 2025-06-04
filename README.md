@@ -1,19 +1,9 @@
-### Commits description
-Add - new features
 
-Fix - bugs
-
-Update — update current features
-
-Remove - delete code or features
-
-Refactor — change code without functional behavour 
-
-Docs — change documentation
 
 
 # Project structure
 
+```
 basic/
 │
 ├── src
@@ -26,5 +16,20 @@ basic/
 │
 ├── config.py    # Model hyperparameters
 └── README.md
+```
 
 # Description
+
+
+## Commits description
+Add - new features
+
+Fix - bugs
+
+Update — update current features
+
+Remove - delete code or features
+
+Refactor — change code without functional behavour 
+
+Docs — change documentation
