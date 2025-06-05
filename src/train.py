@@ -16,6 +16,8 @@ from config import SUBJECTS, WINDOW_SIZE, GLOBAL_SEED, TRAIN_SIZE, BATCH_SIZE, G
 import random
 import numpy as np
 
+import logging
+
 
 def set_seed(seed=42):
     random.seed(seed)
@@ -24,6 +26,15 @@ def set_seed(seed=42):
 
 set_seed(GLOBAL_SEED)
 
+
+logging.basicConfig(
+    filename='train.log',  # Имя файла
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
 class Trainer:
     def __init__(self, model: nn.Module, device=torch.device('cuda'), lr=1e-3, weights=None):
@@ -109,6 +120,7 @@ def main():
     train_dataset = SurfaceEMGDataset(emg_train, labels_train, gestures=GESTURE_INDEXES, transform=standardizer)
     test_dataset = SurfaceEMGDataset(emg_test, labels_test, gestures=GESTURE_INDEXES, transform=standardizer)
 
+    print('РАЗМЕРНОСТЬ', train_dataset[0][0].shape)
     train_sampler = make_weighted_sampler(train_dataset)
 
     # ys = torch.tensor([y[1] for y in train_dataset])
@@ -125,9 +137,11 @@ def main():
         train_loss, train_acc = trainer.train_epoch(train_dataloader)
         test_loss,  test_acc = trainer.evaluate(test_dataloader)
 
-        print(f"Epoch {epoch+1}/{EPOCHS} | "
-            f"Train Loss: {train_loss:.4f}, Acc: {train_acc:.4f} | "
-            f"Val Loss: {test_loss:.4f}, Acc: {test_acc:.4f}")
+        info_str = f"Epoch {epoch+1}/{EPOCHS} | Train Loss: {train_loss:.4f}, Acc: {train_acc:.4f} | Val Loss: {test_loss:.4f}, Acc: {test_acc:.4f}"
+        logger.info(info_str)
+        # print(f"Epoch {epoch+1}/{EPOCHS} | "
+        #     f"Train Loss: {train_loss:.4f}, Acc: {train_acc:.4f} | "
+        #     f"Val Loss: {test_loss:.4f}, Acc: {test_acc:.4f}")
 
     # for X, y in train_dataloader:
     #     # print(X.shape)
