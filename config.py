@@ -4,13 +4,13 @@ GLOBAL_SEED = 42
 GESTURE_INDEXES = [0, 1, 2, 6, 7]
 
 # NOTE: Параметры сигналов
-WINDOW_SIZE = 52
+WINDOW_SIZE = 32
 N_CHANNELS = 8
-STEP_SIZE = 5
+STEP_SIZE = 10
 
 # NOTE: Параметры сверточных слоев
 FILTERS = [32, 64]
-KERNEL_SIZE = (3, 3)
+KERNEL_SIZE = (3, 5)
 POOL_SIZE = (1, 3)
 DROPOUT2D = 0.2
 INPUT_DIM_CNN = (N_CHANNELS, WINDOW_SIZE)
@@ -32,4 +32,4 @@ BATCH_SIZE = 2**9
 # NOTE: Параметры оптимизатора
 LEARNING_RATE = 1e-5
 
-EPOCHS = 1000
+EPOCHS = 10000
