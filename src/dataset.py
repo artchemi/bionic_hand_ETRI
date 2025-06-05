@@ -8,6 +8,42 @@ import utils
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))    # Импортируем корневую директорию
 from config import SUBJECTS
 
+def extract_emg_labels(mat_file_path: str) -> list:
+    emgs = []
+    labels = []
+
+    for i in range(1, 2):
+        file_path = f'data/s{i}/S{i}_E2_A1.mat'
+        data = loadmat(file_path)
+
+        # NOTE: Добавляются первые 8 колонок, которые равномерно расположены вокруг 
+        # предплечья на высоте лучезапястного сустава
+        emg_raw = data['emg'][:,0:8] 
+        labels_raw = data['stimulus']       
+
+        emgs.extend(utils.split_into_batches(emg_raw, 32))
+        labels_tmp = utils.split_into_batches(labels_raw, 32)
+
+        for label_window in labels_tmp:
+            labels_unique, freqs = np.unique(label_window, return_counts=True) 
+
+            if freqs.shape == (2,):    # Если в частотах больше одного значения
+                idx_max = np.where(freqs == freqs.max())
+
+                # print(idx_max[0])
+                if len(idx_max[0].tolist()) == 2:    # Могут быть равные количества, скипаем это
+                    print(idx_max[0].tolist())
+                    continue
+                else:
+                    labels.append(labels_unique[idx_max])
+            else:
+                labels.append(labels_unique)
+
+    # TODO: Добавить one-hot кодирование 
+    return emgs, labels
+
+
+
 class SurfaceEMGDataset(Dataset):
     def __init__(self,  subjects_lst=SUBJECTS, data_dir='data/', exercise=2, transform=None, window_size=32):
         self.data_dir = data_dir
@@ -58,26 +94,35 @@ def main():
     emgs = []
     labels = []
 
-    for i in range(1, 3):
+    # NOTE: Извлечение сигналов и меток из .mat 
+    for i in range(1, 2):
         file_path = f'data/s{i}/S{i}_E2_A1.mat'
         data = loadmat(file_path)
 
-        emg_raw = data['emg'][:,0:8]    # TODO: Проверить какие датчики добавляются, т.к. в массиве 16 сигналов
+        emg_raw = data['emg'][:,0:8]    # NOTE: 
         labels_raw = data['stimulus']       
 
         emgs.extend(utils.split_into_batches(emg_raw, 32))
         labels_tmp = utils.split_into_batches(labels_raw, 32)
 
         for label_window in labels_tmp:
-            _, freqs = np.unique(label_window, return_counts=True) 
+            labels_unique, freqs = np.unique(label_window, return_counts=True) 
 
-            if freqs.shape != (1,):
-                print(np.where(freqs == freqs.max()))
-                print(freqs)
+            if freqs.shape == (2,):    # Если в частотах больше одного значения
+                idx_max = np.where(freqs == freqs.max())
+
+                # print(idx_max[0])
+                if len(idx_max[0].tolist()) == 2:    # Могут быть равные количества, скипаем это
+                    print(idx_max[0].tolist())
+                    continue
+                else:
+                    labels.append(labels_unique[idx_max])
+            else:
+                labels.append(labels_unique)
 
     print(len(emgs))
     print(emgs[0].shape)
-    print(emgs[0])
+    # print(np.array(labels))
 
 if __name__ == "__main__":
     main()
