@@ -10,7 +10,7 @@ import config
 
 class ConvEncoder(nn.Module):
     def __init__(self, filters=config.FILTERS, dropout=config.DROPOUT2D, kernel_size=config.KERNEL_SIZE, 
-                 input_shape=(1, config.INPUT_DIM_CNN[0], config.INPUT_DIM_CNN[1]), pool_size=config.KERNEL_SIZE) -> None:
+                 input_shape=(1, config.INPUT_DIM_CNN[0], config.INPUT_DIM_CNN[1]), pool_size=config.POOL_SIZE) -> None:
         """Конструктор класса сверточного энкодера
 
         Args:
@@ -25,13 +25,13 @@ class ConvEncoder(nn.Module):
         self.conv_1 = nn.Sequential(*[
             nn.Conv2d(in_channels=1, out_channels=filters[0], kernel_size=kernel_size, padding='same'),    # padding='same'
             nn.BatchNorm2d(filters[0]), nn.PReLU(), nn.Dropout2d(dropout), 
-            # nn.MaxPool2d(pool_size)
+            nn.MaxPool2d(kernel_size=pool_size)
         ])
 
         self.conv_2 = nn.Sequential(*[
             nn.Conv2d(in_channels=filters[0], out_channels=filters[1], kernel_size=kernel_size, padding='same'),
             nn.BatchNorm2d(filters[1]), nn.PReLU(), nn.Dropout2d(dropout), 
-            # nn.MaxPool2d(pool_size),
+            nn.MaxPool2d(pool_size),
         ])
 
         self.flatten = nn.Flatten()
@@ -65,7 +65,7 @@ class FFClassifier(nn.Module):
 
         for i in range(len(hidden_dim)):
             if i + 1 == len(hidden_dim):
-                layers.extend([nn.Linear(hidden_dim[i], output_dim), nn.Softmax(dim=1)])
+                layers.extend([nn.Linear(hidden_dim[i], output_dim)])    # nn.Softmax(dim=1)ё
             else:
                 layers.extend([nn.Linear(hidden_dim[i], hidden_dim[i+1]), nn.PReLU()])
 
@@ -87,21 +87,6 @@ class FullModel(nn.Module):
 
     def forward(self, x):
         x, x_channels = self.conv_encoder(x)
-        print('Conv', x.shape)
         out = self.ff_classifier(x)
 
         return out, x_channels
-    
-
-class Trainer:
-    def __init__(self, model: nn.Module, device=torch.device('cuda'), lr=1e-3):
-
-        pass
-
-    def train_epoch(self, dataloader: DataLoader) -> list:
-        pass
-
-    def evaluate(self, dataloader: DataLoader) -> list:
-        pass
-
-
