@@ -43,12 +43,16 @@ def extract_emg_labels(subjects, exercise=2, window_size=WINDOW_SIZE) -> list:
                     continue
                 else:
                     # labels.append(labels_unique[idx_max])
-                    labels.append(labels_unique[idx_max[0][0]])
+                    # labels.append(labels_unique[idx_max[0][0]])
+                    labels.append(int(labels_unique[idx_max[0][0]]))
             else:
-                labels.append(labels_unique)
-                
+                # labels.append(labels_unique)
+                labels.append(int(labels_unique[0]))
+
+    enc = OneHotEncoder(sparse_output=False)
+    labels_encoded = enc.fit_transform(np.array(labels).reshape(-1, 1))            
     # TODO: Добавить one-hot кодирование 
-    return emgs, labels
+    return emgs, labels_encoded
 
 
 
@@ -72,9 +76,10 @@ class SurfaceEMGDataset(Dataset):
         
 
 def main():
-    dataset = SurfaceEMGDataset()
+    dataset = SurfaceEMGDataset(window_size=30)
 
     print(dataset[0])
+    print(len(dataset))
 
 if __name__ == "__main__":
     main()
