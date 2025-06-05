@@ -21,6 +21,7 @@ Main.
 
 DB5 - this Ninapro dataset includes sEMG and kinematic data from 10 intact subjects while repeating 52 hand movements plus the rest position.
 The dataset is described in detail in the following scientific paper:
+
 [Pizzolato et al., Comparison of six electromyography acquisition setups on hand movement classification tasks, PLOS One, 2017](https://pubmed.ncbi.nlm.nih.gov/29023548/)
 
 There are 7 gestures and 10 subjects in dataset for training.
