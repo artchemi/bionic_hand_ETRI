@@ -1,19 +1,27 @@
 import os
 import sys
+
+import torch
 from torch.utils.data import Dataset
+
 from scipy.io import loadmat
 import numpy as np
+
 import utils
+from tqdm import tqdm
+
+from sklearn.preprocessing import OneHotEncoder
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))    # Импортируем корневую директорию
-from config import SUBJECTS
+from config import SUBJECTS, WINDOW_SIZE
 
-def extract_emg_labels(mat_file_path: str) -> list:
+
+def extract_emg_labels(subjects, exercise=2, window_size=WINDOW_SIZE) -> list:
     emgs = []
     labels = []
 
-    for i in range(1, 2):
-        file_path = f'data/s{i}/S{i}_E2_A1.mat'
+    for subject in tqdm(subjects):    # TODO: Добавить выбор пользователей через аргументы 
+        file_path = f'data/s{subject}/S{subject}_E{exercise}_A1.mat'
         data = loadmat(file_path)
 
         # NOTE: Добавляются первые 8 колонок, которые равномерно расположены вокруг 
@@ -21,8 +29,8 @@ def extract_emg_labels(mat_file_path: str) -> list:
         emg_raw = data['emg'][:,0:8] 
         labels_raw = data['stimulus']       
 
-        emgs.extend(utils.split_into_batches(emg_raw, 32))
-        labels_tmp = utils.split_into_batches(labels_raw, 32)
+        emgs.extend(utils.split_into_batches(emg_raw, window_size))
+        labels_tmp = utils.split_into_batches(labels_raw, window_size)
 
         for label_window in labels_tmp:
             labels_unique, freqs = np.unique(label_window, return_counts=True) 
@@ -32,97 +40,41 @@ def extract_emg_labels(mat_file_path: str) -> list:
 
                 # print(idx_max[0])
                 if len(idx_max[0].tolist()) == 2:    # Могут быть равные количества, скипаем это
-                    print(idx_max[0].tolist())
                     continue
                 else:
-                    labels.append(labels_unique[idx_max])
+                    # labels.append(labels_unique[idx_max])
+                    labels.append(labels_unique[idx_max[0][0]])
             else:
                 labels.append(labels_unique)
-
+                
     # TODO: Добавить one-hot кодирование 
     return emgs, labels
 
 
 
 class SurfaceEMGDataset(Dataset):
-    def __init__(self,  subjects_lst=SUBJECTS, data_dir='data/', exercise=2, transform=None, window_size=32):
-        self.data_dir = data_dir
+    def __init__(self,  subjects_lst=SUBJECTS, exercise=2, transform=None, window_size=32):
         self.transform = transform
-        self.exercise = exercise
-        self.window_size = window_size
 
-        self.folder_list = [name for name in os.listdir(self.data_dir) if os.path.isdir(os.path.join(self.data_dir, name))]
-        self.folder_list = sorted(self.folder_list)
-
-        self.emg = []
-
-
+        self.emg, self.labels = extract_emg_labels(subjects_lst, exercise=exercise, window_size=window_size)
 
     def __len__(self):
-        return len(self.folder_list)
+        return len(self.emg)
 
     def __getitem__(self, idx):
-        folder_path = os.path.join(self.data_dir, self.folder_list[idx])
-        
-        for i in range(1, 11):
-            filename = f'S1_E{self.exercise}_A1.mat'
-            file_path = os.path.join(folder_path, filename)
-
-            data = loadmat(file_path)
-
-
-        image = Image.open(file_path + f'S1_E{self.exercise}_A1.mat')
+        X = torch.tensor(self.emg[idx], dtype=torch.float32)
+        y = torch.tensor(self.labels[idx], dtype=torch.long)
 
         if self.transform:
-            image = self.transform(image)
+            X = self.transform(X)
 
-        label = self._get_label(file_path)  # свой способ получения метки
-        return image, label
-
-    def _get_label(self, file_path):
-        # Например, извлекаем метку из имени файла
-        # 'cat_01.jpg' -> метка 0, 'dog_01.jpg' -> метка 1
-        if "cat" in file_path:
-            return 0
-        elif "dog" in file_path:
-            return 1
-        else:
-            return -1  # или обработка ошибки
+        return X, y
         
 
 def main():
-    emgs = []
-    labels = []
+    dataset = SurfaceEMGDataset()
 
-    # NOTE: Извлечение сигналов и меток из .mat 
-    for i in range(1, 2):
-        file_path = f'data/s{i}/S{i}_E2_A1.mat'
-        data = loadmat(file_path)
-
-        emg_raw = data['emg'][:,0:8]    # NOTE: 
-        labels_raw = data['stimulus']       
-
-        emgs.extend(utils.split_into_batches(emg_raw, 32))
-        labels_tmp = utils.split_into_batches(labels_raw, 32)
-
-        for label_window in labels_tmp:
-            labels_unique, freqs = np.unique(label_window, return_counts=True) 
-
-            if freqs.shape == (2,):    # Если в частотах больше одного значения
-                idx_max = np.where(freqs == freqs.max())
-
-                # print(idx_max[0])
-                if len(idx_max[0].tolist()) == 2:    # Могут быть равные количества, скипаем это
-                    print(idx_max[0].tolist())
-                    continue
-                else:
-                    labels.append(labels_unique[idx_max])
-            else:
-                labels.append(labels_unique)
-
-    print(len(emgs))
-    print(emgs[0].shape)
-    # print(np.array(labels))
+    print(dataset[0])
 
 if __name__ == "__main__":
     main()
