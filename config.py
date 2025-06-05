@@ -14,4 +14,7 @@ HIDDEN_DIM = [512, 128]
 OUTPUT_DIM = len(GESTURE_INDEXES)
 
 # NOTE: Список субъектов
-SUBJECTS = ['s1', 's2', 's3', 's4', 's5', 's6', 's7', 's8', 's9', 's10']
+SUBJECTS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+# NOTE: Размер окна
+WINDOW_SIZE = 10
