@@ -4,42 +4,53 @@ import sys
 from model import FullModel
 import torch
 from torch import nn
-from torch.utils.data import DataLoader, WeightedRandomSampler
+from torch.utils.data import DataLoader
 from dataset import (SurfaceEMGDataset, EMGTransform, extract_emg_labels, make_weighted_sampler, 
                      compute_stats, save_stats, load_stats, GlobalStandardizer, gestures)
 
 from sklearn.model_selection import train_test_split
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))    # Импортируем корневую директорию
-from config import SUBJECTS, WINDOW_SIZE, GLOBAL_SEED, TRAIN_SIZE, BATCH_SIZE, GESTURE_INDEXES, LEARNING_RATE, EPOCHS
+from config import SUBJECTS, WINDOW_SIZE, GLOBAL_SEED, TRAIN_SIZE, BATCH_SIZE, GESTURE_INDEXES, LEARNING_RATE, EPOCHS, RUN_NAME, VALID_SIZE
 
 import random
 import numpy as np
+import pandas as pd
 
 from tqdm import tqdm 
 
+from collections import defaultdict
 import logging
 
 
-def set_seed(seed=42):
+def set_seed(seed=42):    # Фиксируем сиды
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
-
 set_seed(GLOBAL_SEED)
 
-
-logging.basicConfig(
-    filename='train.log',  # Имя файла
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
-
+# NOTE: Логгер 
+logging.basicConfig(filename=f'{RUN_NAME}.log',  # Имя файла
+                    level=logging.INFO,
+                    format='%(asctime)s - %(levelname)s - %(message)s'
+                    )
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
+# NOTE: Словарь для хранения метрики в процессе обучения 
+data = defaultdict(list)    # data['accuracy'].append(...)    data['F1'].append(...)
+
+
 class Trainer:
     def __init__(self, model: nn.Module, device=torch.device('cuda'), lr=1e-3, weights=None):
+        """_summary_
+
+        Args:
+            model (nn.Module): _description_
+            device (_type_, optional): _description_. Defaults to torch.device('cuda').
+            lr (_type_, optional): _description_. Defaults to 1e-3.
+            weights (_type_, optional): _description_. Defaults to None.
+        """
         self.model = model.to(device)
         self.device = device
         self.criterion = nn.CrossEntropyLoss(weight=weights)
@@ -107,7 +118,9 @@ def main():
         rand_seed=GLOBAL_SEED
     )
 
-    emg_train, emg_test, labels_train, labels_test = train_test_split(emg, labels, train_size=TRAIN_SIZE, random_state=GLOBAL_SEED)
+    # NOTE: Разделение данных на обучающую, валидационную и тестовую выборки
+    emg_train, emg_tmp, labels_train, labels_tmp = train_test_split(emg, labels, train_size=TRAIN_SIZE, random_state=GLOBAL_SEED)
+    emg_valid, emg_test, labels_valid, labels_test = train_test_split(emg_tmp, labels_tmp, train_size=VALID_SIZE, random_state=GLOBAL_SEED)
 
     # NOTE: Сохраняем среднее и стандартное отклонение в json, можно закомментировать, если они уже есть
     means, stds = compute_stats(emg_train)      # emg_train: np.ndarray [N, window, C]
@@ -118,12 +131,14 @@ def main():
     # transform = EMGTransform(normalize=True)
 
     train_dataset = SurfaceEMGDataset(emg_train, labels_train, gestures=GESTURE_INDEXES, transform=standardizer)
+    valid_dataset = SurfaceEMGDataset(emg_valid, labels_valid, gestures=GESTURE_INDEXES, transform=standardizer)
     test_dataset = SurfaceEMGDataset(emg_test, labels_test, gestures=GESTURE_INDEXES, transform=standardizer)
 
     train_sampler = make_weighted_sampler(train_dataset)    # NOTE: Сэмплер для несбалансированных классов
 
     train_dataloader = DataLoader(train_dataset, batch_size=BATCH_SIZE, sampler=train_sampler)    # shuffle=True
-    test_dataloader = DataLoader(test_dataset, batch_size=BATCH_SIZE)
+    valid_dataloader = DataLoader(valid_dataset, batch_size=BATCH_SIZE, shuffle=True)
+    test_dataloader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=True)
 
     trainer = Trainer(model, device=device, lr=LEARNING_RATE)
     for epoch in tqdm(range(EPOCHS)):
