@@ -3,11 +3,21 @@
 ```markdown
 basic/
 │
+├── data
+│ ├── s1
+│ ├── s2
+│ ├── ...
+│ └── s_10
+│
+├── notebooks
+│ ├── 1_data.ipynb
+│ ├── 2_conv_exampole.ipynb
+│
 ├── src
 │ ├── model.py    # Main model
 │ ├── preprocessing.py    # Download data 
-│ ├── utils.py    # Additional functions: data parsing, metrics and etc.
-│ └── train-labels.idx1-ubyte
+│ ├── train.py    # Run training
+│ └── utils.py    # Additional functions: data parsing, metrics and etc.
 │
 ├── config.py    # Model hyperparameters
 └── README.md
@@ -28,14 +38,18 @@ There are 7 gestures and 10 subjects in dataset for training.
 
 ## Commits description
 
-Add - new features
+```markdown
 
-Fix - bugs
+ADD    # new features
 
-Update - update current features
+FIX    # bugs
 
-Remove - delete code or features
+UPDATE    # update current features
 
-Refactor - change code without functional behavour
+REMOVE    # delete code or features
 
-Docs - change documentation
+REFACTOR    #change code without functional behavour
+
+DOCS    # change documentation
+
+```
