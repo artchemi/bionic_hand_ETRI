@@ -16,6 +16,8 @@ from config import SUBJECTS, WINDOW_SIZE, GLOBAL_SEED, TRAIN_SIZE, BATCH_SIZE, G
 import random
 import numpy as np
 
+from tqdm import tqdm 
+
 import logging
 
 
@@ -133,7 +135,7 @@ def main():
     test_dataloader = DataLoader(test_dataset, batch_size=BATCH_SIZE)
 
     trainer = Trainer(model, device=device, lr=LEARNING_RATE)
-    for epoch in range(EPOCHS):
+    for epoch in tqdm(range(EPOCHS)):
         train_loss, train_acc = trainer.train_epoch(train_dataloader)
         test_loss,  test_acc = trainer.evaluate(test_dataloader)
 
