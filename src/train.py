@@ -11,7 +11,8 @@ from dataset import (SurfaceEMGDataset, EMGTransform, extract_emg_labels, make_w
 from sklearn.model_selection import train_test_split
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))    # Импортируем корневую директорию
-from config import SUBJECTS, WINDOW_SIZE, GLOBAL_SEED, TRAIN_SIZE, BATCH_SIZE, GESTURE_INDEXES, LEARNING_RATE, EPOCHS, RUN_NAME, VALID_SIZE
+from config import (SUBJECTS, WINDOW_SIZE, GLOBAL_SEED, TRAIN_SIZE, BATCH_SIZE, GESTURE_INDEXES, 
+                    LEARNING_RATE, EPOCHS, RUN_NAME, VALID_SIZE, EARLY_STOP_THRS)
 
 import random
 import numpy as np
@@ -29,16 +30,43 @@ def set_seed(seed=42):    # Фиксируем сиды
     torch.manual_seed(seed)
 set_seed(GLOBAL_SEED)
 
+# NOTE: Создаем папку для хранения логов
+logs_path = f'logs/{RUN_NAME}'
+os.makedirs(logs_path, exist_ok=True)
+
 # NOTE: Логгер 
-logging.basicConfig(filename=f'{RUN_NAME}.log',  # Имя файла
+logging.basicConfig(filename=logs_path+'/'+'run.log',  # Имя файла
                     level=logging.INFO,
                     format='%(asctime)s - %(levelname)s - %(message)s'
                     )
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-# NOTE: Словарь для хранения метрики в процессе обучения 
-data = defaultdict(list)    # data['accuracy'].append(...)    data['F1'].append(...)
+
+class CSVLogger:
+    def __init__(self) -> None:
+        self.data = defaultdict(list)
+        self.set_types = ['train', 'valid', 'test']
+
+    def add_metrics(self, loss: list, accuracy:list) -> None:
+        """_summary_
+
+        Args:
+            loss (list): _description_
+            accuracy (list): _description_
+
+        Returns:
+            _type_: _description_
+        """
+        assert len(loss) == len(accuracy), "Количество метрик должно совпдаать"
+
+        for set, loss_set, accuracy_set in zip(self.set_types, loss, accuracy):
+            self.data[f'{set}_loss'].append(loss_set)
+            self.data[f'{set}_accuracy'].append(accuracy_set)
+    
+    def save_csv(self, path: str) -> None:
+        df = pd.DataFrame(self.data)
+        df.to_csv(path, index=False)
 
 
 class Trainer:
@@ -141,13 +169,36 @@ def main():
     test_dataloader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=True)
 
     trainer = Trainer(model, device=device, lr=LEARNING_RATE)
+    logger_csv = CSVLogger()    # Сохраняет метрики после обучения в .csv
+
+    min_loss_valid = 0
+    counter = 0
     for epoch in tqdm(range(EPOCHS)):
-        train_loss, train_acc = trainer.train_epoch(train_dataloader)
+        train_loss, train_acc = trainer.train_epoch(train_dataloader)    # NOTE: Обучение на одной эпохе
+
+        # NOTE: Тестирование
+        train_loss,  train_acc = trainer.evaluate(train_dataloader) 
+        valid_loss,  valid_acc = trainer.evaluate(valid_dataloader)
         test_loss,  test_acc = trainer.evaluate(test_dataloader)
+
+        logger_csv.add_metrics(loss=[train_loss, valid_loss, test_loss], accuracy=[train_acc, valid_acc, test_acc])
 
         info_str = f"Epoch {epoch+1}/{EPOCHS} | Train Loss: {train_loss:.4f}, Acc: {train_acc:.4f} | Val Loss: {test_loss:.4f}, Acc: {test_acc:.4f}"
         logger.info(info_str)
+
+        if epoch == 0:
+            min_loss_valid = valid_loss
+        elif valid_loss < min_loss_valid:
+            min_loss_valid = valid_loss
+            counter = 0
+        else:
+            counter += 1
         
+        if counter > EARLY_STOP_THRS:
+            logger.info(f'Best valid loss: {min_loss_valid}')
+            break
+
+    logger_csv.save_csv(path=logs_path+'/'+'metrics.csv')    # NOTE: Сохранение .csv    
 
 if __name__ == "__main__":
     main()

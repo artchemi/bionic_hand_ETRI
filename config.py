@@ -30,9 +30,12 @@ SUBJECT_TEST = 10
 
 # NOTE: Параметры датасета
 TRAIN_SIZE = 0.7
+VALID_SIZE = 0.5    # Относительно тестовой выборки
 BATCH_SIZE = 2**9
 
 # NOTE: Параметры оптимизатора
 LEARNING_RATE = 1e-5
 
-EPOCHS = 10000
+# NOTE: Параметры обучения 
+EPOCHS = 10000000
+EARLY_STOP_THRS = 500  
