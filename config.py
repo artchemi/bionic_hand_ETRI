@@ -1,3 +1,6 @@
+# TODO: 
+RUN_NAME = 'model_1'
+
 GLOBAL_SEED = 42
 
 # NOTE: Жесты
