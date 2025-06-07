@@ -99,7 +99,6 @@ def main():
     model = FullModel()
     
     emg, labels = extract_emg_labels(subjects=SUBJECTS, window_size=WINDOW_SIZE, onehot=False)
-    # emg, labels = relax_shrink(emg, labels, shrink_size=80000, seed=GLOBAL_SEED)
     emg, labels = gestures(
         emg,
         labels,
@@ -113,23 +112,15 @@ def main():
     # NOTE: Сохраняем среднее и стандартное отклонение в json, можно закомментировать, если они уже есть
     means, stds = compute_stats(emg_train)      # emg_train: np.ndarray [N, window, C]
     save_stats(means, stds, 'emg_stats.json')
-
-    transform = EMGTransform(normalize=True)
-
-    means, stds = load_stats('emg_stats.json')
+    means, stds = load_stats('emg_stats.json')    # Импортируем stats и делаем стандартизатор
     standardizer = GlobalStandardizer(means, stds)
+
+    # transform = EMGTransform(normalize=True)
 
     train_dataset = SurfaceEMGDataset(emg_train, labels_train, gestures=GESTURE_INDEXES, transform=standardizer)
     test_dataset = SurfaceEMGDataset(emg_test, labels_test, gestures=GESTURE_INDEXES, transform=standardizer)
 
-    print('РАЗМЕРНОСТЬ', train_dataset[0][0].shape)
-    train_sampler = make_weighted_sampler(train_dataset)
-
-    # ys = torch.tensor([y[1] for y in train_dataset])
-    # print(ys.shape)
-    # print(torch.where(ys == 0)[0].shape)
-    # print(torch.where(ys == [1, 2])[0])
-    # print(torch.where(ys == [1, 2])[0].shape)
+    train_sampler = make_weighted_sampler(train_dataset)    # NOTE: Сэмплер для несбалансированных классов
 
     train_dataloader = DataLoader(train_dataset, batch_size=BATCH_SIZE, sampler=train_sampler)    # shuffle=True
     test_dataloader = DataLoader(test_dataset, batch_size=BATCH_SIZE)
@@ -141,16 +132,7 @@ def main():
 
         info_str = f"Epoch {epoch+1}/{EPOCHS} | Train Loss: {train_loss:.4f}, Acc: {train_acc:.4f} | Val Loss: {test_loss:.4f}, Acc: {test_acc:.4f}"
         logger.info(info_str)
-        # print(f"Epoch {epoch+1}/{EPOCHS} | "
-        #     f"Train Loss: {train_loss:.4f}, Acc: {train_acc:.4f} | "
-        #     f"Val Loss: {test_loss:.4f}, Acc: {test_acc:.4f}")
-
-    # for X, y in train_dataloader:
-    #     # print(X.shape)
-    #     print('Размерность основного выхода', model(X)[0])``
-    #     print('Размерность после сверток', model(X)[1].shape)
-    #     break
-
+        
 
 if __name__ == "__main__":
     main()
