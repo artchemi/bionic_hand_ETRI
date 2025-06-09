@@ -2,9 +2,12 @@ import os
 import sys
 
 from model import FullModel
+
 import torch
 from torch import nn
 from torch.utils.data import DataLoader
+from ptflops import get_model_complexity_info    # Для оценки нагруженности модели
+
 from dataset import (SurfaceEMGDataset, EMGTransform, extract_emg_labels, make_weighted_sampler, 
                      compute_stats, save_stats, load_stats, GlobalStandardizer, gestures)
 
@@ -13,7 +16,7 @@ from sklearn.metrics import f1_score, precision_score, recall_score
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))    # Импортируем корневую директорию
 from config import (SUBJECTS, WINDOW_SIZE, GLOBAL_SEED, TRAIN_SIZE, BATCH_SIZE, GESTURE_INDEXES, 
-                    LEARNING_RATE, EPOCHS, RUN_NAME, VALID_SIZE, EARLY_STOP_THRS)
+                    LEARNING_RATE, EPOCHS, RUN_NAME, VALID_SIZE, EARLY_STOP_THRS, INPUT_DIM_CNN)
 
 import random
 import numpy as np
@@ -188,6 +191,17 @@ def main():
 
     trainer = Trainer(model, device=device, lr=LEARNING_RATE)
     logger_csv = CSVLogger()    # Сохраняет метрики после обучения в .csv
+
+    input_shape = (INPUT_DIM_CNN[0], INPUT_DIM_CNN[1])
+    macs, params = get_model_complexity_info(model, input_shape, as_strings=True, print_per_layer_stat=True, verbose=True)
+    flops = (float(macs.split(' ')[0]) * 2) / 1e6
+    # print(f'MACs: {macs}')
+    # print(f'Params: {params}')
+    # print(f'MFlops: {flops}')
+
+    logger.info(f'MACs: {macs}')
+    logger.info(f'Parameters: {params}')
+    logger.info(f'FLops: {flops}')
 
     early_stopping_dict = {'min_loss_valid': 0, 'best_epoch': 0, 'counter': 0}
     for epoch in tqdm(range(EPOCHS)):
