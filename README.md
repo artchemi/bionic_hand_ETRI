@@ -101,7 +101,7 @@ FullModel(
 
 ```
 
-### Learning parameters
+### Training parameters
 
 - **Optimizer**: Adam(lr=1e-4)
 
