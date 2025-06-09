@@ -34,8 +34,8 @@ VALID_SIZE = 0.5    # Относительно тестовой выборки
 BATCH_SIZE = 2**9
 
 # NOTE: Параметры оптимизатора
-LEARNING_RATE = 1e-5
+LEARNING_RATE = 1e-4
 
 # NOTE: Параметры обучения 
-EPOCHS = 10000000
+EPOCHS = 10000
 EARLY_STOP_THRS = 500  
