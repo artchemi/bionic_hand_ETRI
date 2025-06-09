@@ -9,6 +9,7 @@ from dataset import (SurfaceEMGDataset, EMGTransform, extract_emg_labels, make_w
                      compute_stats, save_stats, load_stats, GlobalStandardizer, gestures)
 
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import f1_score, precision_score, recall_score
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))    # Импортируем корневую директорию
 from config import (SUBJECTS, WINDOW_SIZE, GLOBAL_SEED, TRAIN_SIZE, BATCH_SIZE, GESTURE_INDEXES, 
@@ -32,13 +33,15 @@ set_seed(GLOBAL_SEED)
 
 # NOTE: Создаем папку для хранения логов
 logs_path = f'logs/{RUN_NAME}'
+log_file = logs_path+'/'+'run.log'
 os.makedirs(logs_path, exist_ok=True)
 
 # NOTE: Логгер 
-logging.basicConfig(filename=logs_path+'/'+'run.log',  # Имя файла
+if os.path.exists(log_file):    # Удаляет старый лог
+    os.remove(log_file)
+logging.basicConfig(filename=log_file,  # Имя файла
                     level=logging.INFO,
-                    format='%(asctime)s - %(levelname)s - %(message)s'
-                    )
+                    format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
@@ -48,7 +51,7 @@ class CSVLogger:
         self.data = defaultdict(list)
         self.set_types = ['train', 'valid', 'test']
 
-    def add_metrics(self, loss: list, accuracy:list) -> None:
+    def add_metrics(self, loss: list, accuracy: list, f1: list) -> None:
         """_summary_
 
         Args:
@@ -114,6 +117,9 @@ class Trainer:
         correct = 0
         total = 0
 
+        all_preds = []
+        all_labels = []
+
         with torch.no_grad():
             for inputs, labels in dataloader:
                 inputs, labels = inputs.to(self.device), labels.to(self.device)
@@ -126,9 +132,16 @@ class Trainer:
                 correct += (preds == labels).sum().item()
                 total += labels.size(0)
 
+                all_preds.extend(preds.cpu().numpy())
+                all_labels.extend(labels.cpu().numpy())
+
         avg_loss = total_loss / total
         accuracy = correct / total
-        return [avg_loss, accuracy]
+        
+        # NOTE: Расчет метрик классификации
+        f1 = f1_score(all_labels, all_preds, average='micro')    # FIXME: Подумать, что будет лучше: micro, macro или weighted 
+
+        return [avg_loss, accuracy, f1]
 
 
 def main():
@@ -171,34 +184,39 @@ def main():
     trainer = Trainer(model, device=device, lr=LEARNING_RATE)
     logger_csv = CSVLogger()    # Сохраняет метрики после обучения в .csv
 
-    min_loss_valid = 0
-    counter = 0
+    early_stopping_dict = {'min_loss_valid': 0, 'best_epoch': 0, 'counter': 0}
     for epoch in tqdm(range(EPOCHS)):
         train_loss, train_acc = trainer.train_epoch(train_dataloader)    # NOTE: Обучение на одной эпохе
 
         # NOTE: Тестирование
-        train_loss,  train_acc = trainer.evaluate(train_dataloader) 
-        valid_loss,  valid_acc = trainer.evaluate(valid_dataloader)
-        test_loss,  test_acc = trainer.evaluate(test_dataloader)
+        train_loss,  train_acc, f1_train = trainer.evaluate(train_dataloader) 
+        valid_loss,  valid_acc, f1_valid = trainer.evaluate(valid_dataloader)
+        test_loss,  test_acc, f1_test = trainer.evaluate(test_dataloader)
 
-        logger_csv.add_metrics(loss=[train_loss, valid_loss, test_loss], accuracy=[train_acc, valid_acc, test_acc])
+        logger_csv.add_metrics(loss=[train_loss, valid_loss, test_loss], accuracy=[train_acc, valid_acc, test_acc], 
+                               f1=[f1_train, f1_valid, f1_test])
 
-        info_str = f"Epoch {epoch+1}/{EPOCHS} | Train Loss: {train_loss:.4f}, Acc: {train_acc:.4f} | Val Loss: {test_loss:.4f}, Acc: {test_acc:.4f}"
+        info_str = f"Epoch {epoch+1}/{EPOCHS} | Train Loss: {train_loss:.4f}, Acc: {train_acc:.4f} | Val Loss: {valid_loss:.4f}, Acc: {valid_acc:.4f}"
         logger.info(info_str)
 
         if epoch == 0:
-            min_loss_valid = valid_loss
-        elif valid_loss < min_loss_valid:
-            min_loss_valid = valid_loss
-            counter = 0
+            early_stopping_dict['min_loss_valid'] = valid_loss
+            early_stopping_dict['best_epoch'] = epoch
+        elif valid_loss < early_stopping_dict['min_loss_valid']:    # Сброс счетчика и обновление оптимальных метрик
+            early_stopping_dict['min_loss_valid'] = valid_loss
+            early_stopping_dict['best_epoch'] = epoch
+            early_stopping_dict['counter'] = 0
         else:
-            counter += 1
+            early_stopping_dict['counter'] += 1
         
-        if counter > EARLY_STOP_THRS:
-            logger.info(f'Best valid loss: {min_loss_valid}')
+        if early_stopping_dict['counter'] > EARLY_STOP_THRS:
+            logger.info(f"Best valid loss: {early_stopping_dict['min_loss_valid']}")
+            logger.info(f"Best epoch: {early_stopping_dict['best_epoch']}")
             break
 
     logger_csv.save_csv(path=logs_path+'/'+'metrics.csv')    # NOTE: Сохранение .csv    
+    torch.save(model.state_dict(), logs_path+f"/best_model_{early_stopping_dict['best_epoch']}.pth")    # Сохранение весов
+
 
 if __name__ == "__main__":
     main()
