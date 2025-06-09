@@ -51,21 +51,24 @@ class CSVLogger:
         self.data = defaultdict(list)
         self.set_types = ['train', 'valid', 'test']
 
-    def add_metrics(self, loss: list, accuracy: list, f1: list) -> None:
+    def add_metrics(self, loss: list, accuracy: list, f1: list=None, precision: list=None, recall: list=None) -> None:
         """_summary_
 
         Args:
             loss (list): _description_
             accuracy (list): _description_
-
-        Returns:
-            _type_: _description_
+            f1 (list, optional): _description_. Defaults to None.
+            precision (list, optional): _description_. Defaults to None.
+            recall (list, optional): _description_. Defaults to None.
         """
-        assert len(loss) == len(accuracy), "Количество метрик должно совпдаать"
+        assert len(loss) == len(accuracy), "Количество метрик должно совпадать"
 
-        for set, loss_set, accuracy_set in zip(self.set_types, loss, accuracy):
+        for set, loss_set, accuracy_set, f1_set, precision_set, recall_set in zip(self.set_types, loss, accuracy, f1, precision, recall):
             self.data[f'{set}_loss'].append(loss_set)
             self.data[f'{set}_accuracy'].append(accuracy_set)
+            self.data[f'{set}_f1'].append(f1_set)
+            self.data[f'{set}_precision'].append(precision_set)
+            self.data[f'{set}_recall'].append(recall_set)
     
     def save_csv(self, path: str) -> None:
         df = pd.DataFrame(self.data)
@@ -139,9 +142,11 @@ class Trainer:
         accuracy = correct / total
         
         # NOTE: Расчет метрик классификации
-        f1 = f1_score(all_labels, all_preds, average='micro')    # FIXME: Подумать, что будет лучше: micro, macro или weighted 
+        precision = precision_score(all_labels, all_preds, average='macro')
+        recall = recall_score(all_labels, all_preds, average='macro')
+        f1 = f1_score(all_labels, all_preds, average='macro')    # FIXME: Подумать, что будет лучше: micro, macro или weighted 
 
-        return [avg_loss, accuracy, f1]
+        return [avg_loss, accuracy, f1, precision, recall]
 
 
 def main():
@@ -189,12 +194,13 @@ def main():
         train_loss, train_acc = trainer.train_epoch(train_dataloader)    # NOTE: Обучение на одной эпохе
 
         # NOTE: Тестирование
-        train_loss,  train_acc, f1_train = trainer.evaluate(train_dataloader) 
-        valid_loss,  valid_acc, f1_valid = trainer.evaluate(valid_dataloader)
-        test_loss,  test_acc, f1_test = trainer.evaluate(test_dataloader)
+        train_loss, train_acc, f1_train, precision_train, recall_train = trainer.evaluate(train_dataloader) 
+        valid_loss, valid_acc, f1_valid, precision_valid, recall_valid = trainer.evaluate(valid_dataloader)
+        test_loss, test_acc, f1_test, precision_test, recall_test = trainer.evaluate(test_dataloader)
 
         logger_csv.add_metrics(loss=[train_loss, valid_loss, test_loss], accuracy=[train_acc, valid_acc, test_acc], 
-                               f1=[f1_train, f1_valid, f1_test])
+                               f1=[f1_train, f1_valid, f1_test], precision=[precision_train, precision_valid, precision_test], 
+                               recall=[recall_train, recall_valid, recall_test])
 
         info_str = f"Epoch {epoch+1}/{EPOCHS} | Train Loss: {train_loss:.4f}, Acc: {train_acc:.4f} | Val Loss: {valid_loss:.4f}, Acc: {valid_acc:.4f}"
         logger.info(info_str)

@@ -38,4 +38,4 @@ LEARNING_RATE = 1e-4
 
 # NOTE: Параметры обучения 
 EPOCHS = 10000
-EARLY_STOP_THRS = 500  
+EARLY_STOP_THRS = 250
