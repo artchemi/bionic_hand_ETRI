@@ -4,7 +4,7 @@ RUN_NAME = 'model_10'
 GLOBAL_SEED = 42
 
 # NOTE: Жесты
-GESTURE_INDEXES = [0, 1, 2, 6, 7]
+GESTURE_INDEXES = [0, 1, 3, 5, 6, 7, 13, 14]    # [0, 1, 2, 6, 7] + добавить один жест из другого упражнения
 
 # NOTE: Параметры сигналов
 WINDOW_SIZE = 10
