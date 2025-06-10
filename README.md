@@ -127,20 +127,19 @@ Relation between accuracy and window size could be usefull for futher choising o
 
 ![Figure 1](images/1_MMACS2.png)
 
+### 2. Paretto-front
+
+### 3. Local maps / Grad-CAM
+
 ## Commits description
 
 ```markdown
 
 ADD    # new features
-
 FIX    # bugs
-
 UPDATE    # update current features
-
 REMOVE    # delete code or features
-
 REFACTOR    #change code without functional behavour
-
 DOCS    # change documentation
 
 ```
