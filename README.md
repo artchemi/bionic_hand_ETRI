@@ -119,6 +119,14 @@ FullModel(
 
 If you want to set up specific parameters for training `config.py` should be changed. After setting up run `train.py`.
 
+## Experiment trials
+
+### 1. Window size
+
+Relation between accuracy and window size could be usefull for futher choising of baseline model. To achive it and find optimal model we took a look on dependencies MMACs (Million Multiply-ACcumulate operations per Second) vs. Window size and Accuracy vs. Window size. Linear increased trend was expected for MMACs because of it depends of input shape. Hovewer, increasing the window increases calculations, but the quality of the model does not always improve proportionally.
+
+![Figure 1](images/1_MMACS2.png)
+
 ## Commits description
 
 ```markdown
