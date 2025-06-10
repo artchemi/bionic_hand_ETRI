@@ -78,11 +78,12 @@ class FFClassifier(nn.Module):
     
 
 class FullModel(nn.Module):
-    def __init__(self):
+    def __init__(self, input_shape):
         super(FullModel, self).__init__()
 
         self.conv_encoder = ConvEncoder()    # [B, C, H, W]
         self.output_dim = self.conv_encoder.get_output_dim((config.INPUT_DIM_CNN[0], config.INPUT_DIM_CNN[1]))    # Автоматически подбирает размерность
+        self.output_dim = self.conv_encoder.get_output_dim(input_shape)
         self.ff_classifier = FFClassifier(input_dim=self.output_dim)
 
     def forward(self, x):

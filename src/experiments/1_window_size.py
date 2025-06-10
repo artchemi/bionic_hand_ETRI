@@ -1,6 +1,8 @@
 import os
 import sys
 
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))) 
+
 from model import FullModel
 
 import torch
@@ -26,6 +28,12 @@ from tqdm import tqdm
 
 from collections import defaultdict
 import logging
+import argparse
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--window_size', type=int, help='Размер окна')
+args = parser.parse_args()
 
 
 def set_seed(seed=42):    # Фиксируем сиды
@@ -35,7 +43,7 @@ def set_seed(seed=42):    # Фиксируем сиды
 set_seed(GLOBAL_SEED)
 
 # NOTE: Создаем папку для хранения логов
-logs_path = f'logs/{RUN_NAME}'
+logs_path = f'logs/model_{args.window_size}'
 log_file = logs_path+'/'+'run.log'
 os.makedirs(logs_path, exist_ok=True)
 
@@ -155,8 +163,8 @@ class Trainer:
 def main():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(device)
-
-    emg, labels = extract_emg_labels(subjects=SUBJECTS, window_size=WINDOW_SIZE, onehot=False)
+    
+    emg, labels = extract_emg_labels(subjects=SUBJECTS, window_size=args.window_size, onehot=False)
     emg, labels = gestures(
         emg,
         labels,
@@ -195,6 +203,7 @@ def main():
     trainer = Trainer(model, device=device, lr=LEARNING_RATE)
     logger_csv = CSVLogger()    # Сохраняет метрики после обучения в .csv
 
+    # input_shape = (INPUT_DIM_CNN[0], INPUT_DIM_CNN[1])
     input_shape = (input_shape[0], input_shape[1])
     macs, params = get_model_complexity_info(model, input_shape, as_strings=True, print_per_layer_stat=True, verbose=True)
     flops = (float(macs.split(' ')[0]) * 2) / 1e6

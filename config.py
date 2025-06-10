@@ -1,5 +1,5 @@
 # TODO: 
-RUN_NAME = 'model_1'
+RUN_NAME = 'model_10'
 
 GLOBAL_SEED = 42
 
@@ -7,7 +7,7 @@ GLOBAL_SEED = 42
 GESTURE_INDEXES = [0, 1, 2, 6, 7]
 
 # NOTE: Параметры сигналов
-WINDOW_SIZE = 32
+WINDOW_SIZE = 10
 N_CHANNELS = 8
 STEP_SIZE = 10
 
