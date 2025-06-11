@@ -1,0 +1,14 @@
+.venv/
+
+# Ignore all archives
+*.zip
+
+data/
+
+__pycache__/
+
+# Ignore logs
+*.log
+logs/
+
+*.json
