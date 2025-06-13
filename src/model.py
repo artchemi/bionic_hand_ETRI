@@ -48,10 +48,10 @@ class ConvEncoder(nn.Module):
     def forward(self, x):
         x = x.unsqueeze(1)    # [B, 1, H, W]
         x = self.conv_1(x)
-        x_channels = self.conv_2(x)
-        x = self.flatten(x_channels)
+        x = self.conv_2(x)
+        out = self.flatten(x)
 
-        return x, x_channels
+        return out
     
 
 class FFClassifier(nn.Module):
@@ -82,12 +82,12 @@ class FullModel(nn.Module):
         super(FullModel, self).__init__()
 
         self.conv_encoder = ConvEncoder()    # [B, C, H, W]
-        self.output_dim = self.conv_encoder.get_output_dim((config.INPUT_DIM_CNN[0], config.INPUT_DIM_CNN[1]))    # Автоматически подбирает размерность
+        # self.output_dim = self.conv_encoder.get_output_dim((config.INPUT_DIM_CNN[0], config.INPUT_DIM_CNN[1]))    # Автоматически подбирает размерность
         self.output_dim = self.conv_encoder.get_output_dim(input_shape)
         self.ff_classifier = FFClassifier(input_dim=self.output_dim)
 
     def forward(self, x):
-        x, x_channels = self.conv_encoder(x)
+        x = self.conv_encoder(x)
         out = self.ff_classifier(x)
 
-        return out, x_channels
+        return out

@@ -103,7 +103,7 @@ class Trainer:
             inputs, labels = inputs.to(self.device), labels.to(self.device)
 
             self.optimizer.zero_grad()
-            outputs, _ = self.model(inputs)
+            outputs = self.model(inputs)
             loss = self.criterion(outputs, labels)
             loss.backward()
             self.optimizer.step()
@@ -130,7 +130,7 @@ class Trainer:
             for inputs, labels in dataloader:
                 inputs, labels = inputs.to(self.device), labels.to(self.device)
 
-                outputs, _ = self.model(inputs)
+                outputs = self.model(inputs)
                 loss = self.criterion(outputs, labels)
 
                 total_loss += loss.item() * inputs.size(0)

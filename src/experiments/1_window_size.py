@@ -111,7 +111,7 @@ class Trainer:
             inputs, labels = inputs.to(self.device), labels.to(self.device)
 
             self.optimizer.zero_grad()
-            outputs, _ = self.model(inputs)
+            outputs = self.model(inputs)
             loss = self.criterion(outputs, labels)
             loss.backward()
             self.optimizer.step()
@@ -138,7 +138,7 @@ class Trainer:
             for inputs, labels in dataloader:
                 inputs, labels = inputs.to(self.device), labels.to(self.device)
 
-                outputs, _ = self.model(inputs)
+                outputs = self.model(inputs)
                 loss = self.criterion(outputs, labels)
 
                 total_loss += loss.item() * inputs.size(0)
@@ -202,20 +202,16 @@ def main():
 
     trainer = Trainer(model, device=device, lr=LEARNING_RATE)
     logger_csv = CSVLogger()    # Сохраняет метрики после обучения в .csv
-
-    # input_shape = (INPUT_DIM_CNN[0], INPUT_DIM_CNN[1])
+    
     input_shape = (input_shape[0], input_shape[1])
     macs, params = get_model_complexity_info(model, input_shape, as_strings=True, print_per_layer_stat=True, verbose=True)
     flops = (float(macs.split(' ')[0]) * 2) / 1e6
-    # print(f'MACs: {macs}')
-    # print(f'Params: {params}')
-    # print(f'MFlops: {flops}')
 
     logger.info(f'MACs: {macs}')
     logger.info(f'Parameters: {params}')
     logger.info(f'FLops: {flops}')
 
-    early_stopping_dict = {'min_loss_valid': 0, 'best_epoch': 0, 'counter': 0}
+    early_stopping_dict = {'min_loss_valid': 0, 'f1': 0, 'best_epoch': 0, 'counter': 0}
     for epoch in tqdm(range(EPOCHS)):
         train_loss, train_acc = trainer.train_epoch(train_dataloader)    # NOTE: Обучение на одной эпохе
 
@@ -230,19 +226,20 @@ def main():
 
         info_str = f"Epoch {epoch+1}/{EPOCHS} | Train Loss: {train_loss:.4f}, Acc: {train_acc:.4f} | Val Loss: {valid_loss:.4f}, Acc: {valid_acc:.4f}"
         logger.info(info_str)
-
-        if epoch == 0:
-            early_stopping_dict['min_loss_valid'] = valid_loss
+        
+        # NOTE: Ранняя остановка
+        if epoch == 0:  
+            early_stopping_dict['f1'] = f1_valid
             early_stopping_dict['best_epoch'] = epoch
-        elif valid_loss < early_stopping_dict['min_loss_valid']:    # Сброс счетчика и обновление оптимальных метрик
-            early_stopping_dict['min_loss_valid'] = valid_loss
+        elif f1_valid > early_stopping_dict['f1']:    # Сброс счетчика и обновление оптимальных метрик
+            early_stopping_dict['f1'] = f1_valid
             early_stopping_dict['best_epoch'] = epoch
             early_stopping_dict['counter'] = 0
         else:
             early_stopping_dict['counter'] += 1
         
         if early_stopping_dict['counter'] > EARLY_STOP_THRS:
-            logger.info(f"Best valid loss: {early_stopping_dict['min_loss_valid']}")
+            logger.info(f"Best valid F1: {early_stopping_dict['f1']}")
             logger.info(f"Best epoch: {early_stopping_dict['best_epoch']}")
             break
 
